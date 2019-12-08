@@ -1,3 +1,19 @@
+#!/bin/bash
+#
+# Modified from original at
+# https://quippe.eu/blog/2016/11/17/determining-minimum-coded-unit-dimensions.html
+#
+# Bug fixes:
+# - Use proper SOF offset (past the two SOF header bytes FF C0 instead of
+#   including them)
+# - Pass filename as last param to hexdump (for macOS BSD hexdump)
+#
+# Enhancements:
+# - Retrieve and display image width and height
+# - Calculate and display number of MCUs
+
+set -eu -o pipefail
+
 file=$1
 
 # Get position and length of SOF0 header in file.
@@ -8,7 +24,7 @@ offset=${sof0hexfields[0]}
 length=${sof0hexfields[1]}
 
 # Read SOF0 values into array.
-sof0string=$(hexdump "$1" -s $offset -n $length -v -e '/1 "%02x "' | \
+sof0string=$(hexdump -s $((offset+2)) -n $length -v -e '/1 "%02x "' "$1" | \
              sed 's/\ $//')
 read -a sof0 <<< "${sof0string}"
 
@@ -43,5 +59,18 @@ y_ver=$(echo ${sof0[9]} | cut -c 2)
 mcu_x=$((y_hor * 8))
 mcu_y=$((y_ver * 8))
 
+height_y=$((16#${sof0[3]}${sof0[4]}))
+width_x=$((16#${sof0[5]}${sof0[6]}))
+
+n_mcu_x=$((width_x / mcu_x))
+n_mcu_y=$((height_y / mcu_y))
+
+n_mcus=$((n_mcu_x * n_mcu_y))
+
+echo -e $"width\t$width_x"
+echo -e $"height\t$height_y"
 echo -e $"mcu_x\t$mcu_x"
 echo -e $"mcu_y\t$mcu_y"
+echo -e $"n_mcu_x\t$n_mcu_x"
+echo -e $"n_mcu_y\t$n_mcu_y"
+echo -e $"n_mcus\t$n_mcus"
