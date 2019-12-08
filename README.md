@@ -13,11 +13,17 @@ quippe.eu](https://quippe.eu/blog/2016/11/17/determining-minimum-coded-unit-dime
 contains a script that calculates and displays the MCU size for YUV-encoded
 JPEG images.  This project enhances that script.
 
+As with the original script:
+
+> Please note that it will only work with YCbCr color space JPEG files and
+> assumes that the 3-byte component parts are in the order Y, Cb, Cr:
+
 ## Changes from the original on quippe.eu
 ### Bug fixes
 - Use proper SOF offset (past the two SOF header bytes FF C0 instead of
   including them)
 - Pass filename as last param to hexdump (for macOS BSD hexdump)
+- Accommodate file names that contain spaces
 
 ### Enhancements
 - Retrieve and display image width and height
