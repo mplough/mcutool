@@ -36,3 +36,17 @@ On macOS, install `exiv2` with [Homebrew](https://brew.sh/):
 ```bash
 brew install exiv2
 ```
+
+## Usage and example output
+```
+$ ./mcutool.sh image.jpg
+width	640
+height	480
+mcu_x	16
+mcu_y	16
+n_full_mcu_x	40
+n_full_mcu_y	30
+n_mcu_x	40
+n_mcu_y	30
+n_mcus	1200
+```
