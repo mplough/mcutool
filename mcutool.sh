@@ -17,7 +17,7 @@ set -eu -o pipefail
 file=$1
 
 # Get position and length of SOF0 header in file.
-sof0hex=$(exiv2 -p S "$file" | grep SOF0 | sed 's/|.*|//')
+sof0hex=$(exiv2 -p S "$file" | grep -e SOF0 -e SOF2 | sed 's/|.*|//')
 IFS=' '
 read -a sof0hexfields <<< "${sof0hex}"
 offset=${sof0hexfields[0]}
