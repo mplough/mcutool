@@ -4,7 +4,7 @@
 # https://quippe.eu/blog/2016/11/17/determining-minimum-coded-unit-dimensions.html
 #
 # Bug fixes:
-# - Use proper SOF offset (past the two SOF header bytes FF C0 instead of
+# - Use proper SOF offset (past the two SOF header bytes FF Cx instead of
 #   including them)
 # - Pass filename as last param to hexdump (for macOS BSD hexdump)
 #
@@ -16,51 +16,53 @@ set -eu -o pipefail
 
 file=$1
 
-# Get position and length of SOF0 header in file.
-sof0hex=$(exiv2 -p S "$file" | grep -e SOF0 -e SOF2 | sed 's/|.*|//')
+# Get position and length of start-of-frame (SOF) header in file.
+# Adding support for other SOF headers may be easy but this has only been
+# tested on SOF0 and SOF2 JPEGs.
+sofhex=$(exiv2 -p S "$file" | grep -e SOF0 -e SOF2 | sed 's/|.*|//')
 IFS=' '
-read -a sof0hexfields <<< "${sof0hex}"
-offset=${sof0hexfields[0]}
-length=${sof0hexfields[1]}
+read -a sofhexfields <<< "${sofhex}"
+offset=${sofhexfields[0]}
+length=${sofhexfields[1]}
 
-# Read SOF0 values into array.
-sof0string=$(hexdump -s $((offset+2)) -n $length -v -e '/1 "%02x "' "$file" | \
+# Read SOF header values into array.
+sofstring=$(hexdump -s $((offset+2)) -n $length -v -e '/1 "%02x "' "$file" | \
              sed 's/\ $//')
-read -a sof0 <<< "${sof0string}"
+read -a sof <<< "${sofstring}"
 
-# Check if length of SOF0 is as expected.
-sof0length=${#sof0[@]}
-sof0explength=$((16#${sof0[0]}${sof0[1]}))
-if [ ${#sof0[@]} -ne $((16#${sof0[0]}${sof0[1]})) ]; then
-  echo "Length of SOF0 in bytes ($sof0length) not as expected ($sof0explength)."
+# Check if length of SOF is as expected.
+soflength=${#sof[@]}
+sofexplength=$((16#${sof[0]}${sof[1]}))
+if [ ${#sof[@]} -ne $((16#${sof[0]}${sof[1]})) ]; then
+  echo "Length of SOF in bytes ($soflength) not as expected ($sofexplength)."
   exit
 fi
 
 # Check if the image is a YCbCr image (the only encoding this script handles).
-if [ ${sof0[7]} -ne 3 ]; then
-  echo "Image has ${sof0[7]} instead of 3 components: not YCbCr."
+if [ ${sof[7]} -ne 3 ]; then
+  echo "Image has ${sof[7]} instead of 3 components: not YCbCr."
   exit
 fi
-if [ ${sof0[14]} -ne 3 ]; then
+if [ ${sof[14]} -ne 3 ]; then
   echo "Image is not YCbCr (most likely YIQ instead, or else just screwed)."
   exit
 fi
 
 # Check if Cb and Cr are both 11.
-if [ ${sof0[12]} -ne 11 -o ${sof0[15]} -ne 11 ]; then
+if [ ${sof[12]} -ne 11 -o ${sof[15]} -ne 11 ]; then
   echo "Sampling factors of Cb and/or Cr is/are not equal to 11."
   exit
 fi
 
 # Determine MCU based on Y component sampling factors:
-y_hor=$(echo ${sof0[9]} | cut -c 1)
-y_ver=$(echo ${sof0[9]} | cut -c 2)
+y_hor=$(echo ${sof[9]} | cut -c 1)
+y_ver=$(echo ${sof[9]} | cut -c 2)
 
 mcu_x=$((y_hor * 8))
 mcu_y=$((y_ver * 8))
 
-height_y=$((16#${sof0[3]}${sof0[4]}))
-width_x=$((16#${sof0[5]}${sof0[6]}))
+height_y=$((16#${sof[3]}${sof[4]}))
+width_x=$((16#${sof[5]}${sof[6]}))
 
 n_full_mcu_x=$((width_x / mcu_x))
 n_full_mcu_y=$((height_y / mcu_y))
